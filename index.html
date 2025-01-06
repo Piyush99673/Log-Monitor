@@ -1,19 +1,106 @@
 <!DOCTYPE html>
-<html>
-   <head><title>Tail -f</title></head>
-   <script src="/socket.io/socket.io.js"></script>
-   <script>
-      var socket = io("ws://localhost:3000");
-      socket.on('update-log', function(data){
-          console.log(data);
-          for(elem of data) document.getElementById('message-container').innerHTML +='<p>' + elem + '</br><p>';
+<html lang="en">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>Real-Time Log Monitoring</title>
+    <script src="/socket.io/socket.io.js"></script>
+    <style>
+      body {
+        font-family: Arial, sans-serif;
+        background-color: #f4f4f9;
+        margin: 0;
+        padding: 20px;
+      }
+      h1 {
+        text-align: center;
+        color: #333;
+      }
+      #message-container {
+        height: 400px;
+        overflow-y: auto;
+        border: 1px solid #ccc;
+        padding: 10px;
+        background: #f9f9f9;
+        border-radius: 8px;
+        font-family: monospace;
+        white-space: pre-wrap;
+      }
+      button {
+        display: block;
+        width: 100px;
+        margin: 10px auto;
+        padding: 10px;
+        font-size: 16px;
+        background: #007bff;
+        color: white;
+        border: none;
+        border-radius: 4px;
+        cursor: pointer;
+      }
+      button:disabled {
+        background: #ccc;
+        cursor: not-allowed;
+      }
+    </style>
+  </head>
+  <body>
+    <h1>Real-Time Log Monitoring</h1>
+    <div id="message-container"></div>
+    <button id="startBtn">Start</button>
+    <button id="stopBtn" disabled>Stop</button>
+
+    <script>
+      const startBtn = document.getElementById("startBtn");
+      const stopBtn = document.getElementById("stopBtn");
+      const messageContainer = document.getElementById("message-container");
+      let socket = null;
+
+      // Function to append messages to the container
+      function appendMessages(messages) {
+        for (const message of messages) {
+          const p = document.createElement("p");
+          p.textContent = message;
+          messageContainer.appendChild(p);
+        }
+        messageContainer.scrollTop = messageContainer.scrollHeight; // Auto-scroll to the latest message
+      }
+
+      // Start button event listener
+      startBtn.addEventListener("click", () => {
+        socket = io("ws://localhost:3000"); // Connect to the backend WebSocket server
+
+        socket.on("init", (data) => {
+          console.log("Initial Data:", data);
+          appendMessages(data);
+        });
+
+        socket.on("update-log", (data) => {
+          console.log("Log Update:", data);
+          appendMessages(data);
+        });
+
+        socket.on("connect", () => {
+          console.log("Connected to server");
+          startBtn.disabled = true;
+          stopBtn.disabled = false;
+        });
+
+        socket.on("disconnect", () => {
+          console.log("Disconnected from server");
+          startBtn.disabled = false;
+          stopBtn.disabled = true;
+        });
       });
-      socket.on('init',function(data){
-        console.log(data);
-        for(elem of data) document.getElementById('message-container').innerHTML +='<p>' + elem + '</br><p>';      })
-   </script>
-   <body>
-       <h1>Log monitoring app</h1>
-      <div id="message-container"></div>
-      </body>
-   </html>
+
+      // Stop button event listener
+      stopBtn.addEventListener("click", () => {
+        if (socket) {
+          socket.disconnect(); // Disconnect the socket
+          socket = null;
+          console.log("Stopped connection");
+        }
+      });
+    </script>
+  </body>
+</html>
